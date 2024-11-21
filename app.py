@@ -11,7 +11,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 path = "/data"  #preset path for hugging face spaces for persistent storage and cannot be changed
 model_id_70b=("meta-llama/Meta-Llama-3.1-70B-Instruct","https://b14thxo2nk6dvoi5.us-east-1.aws.endpoints.huggingface.cloud/v1/")
 model_id_8b=("meta-llama/Meta-Llama-3.1-8B-Instruct", "https://mexbgx3u3tubooi5.us-east-1.aws.endpoints.huggingface.cloud/v1/")
-api_key="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" 
+
 system_def ="""You are a friendly assistant for question-answering tasks. 
 Your name is CRIStine.
 When you know the answer, please provide as much detail as possible.
