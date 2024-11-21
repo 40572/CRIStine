@@ -1,6 +1,5 @@
 streamlit
 streamlit-extras
-streamlit-components
 pillow
 langchain
 langchain-core
