@@ -22,8 +22,6 @@ import pandas as pd
 
 def get_response2(k, user_query, chat_history, base_url, system_msg, max_tokens):
 
-    os.environ["KDBAI_ENDPOINT"]="https://cloud.kdb.ai/instance/vll7od3juu"
-    os.environ["KDBAI_API_KEY"]="55b5f60255-tZH6yYvTm4t6SA9z9sW9LL1e/LYZ4hkU4yAv9cBTLFtB/KNSZ40qgBmOeNlZ8vMyUUhOOCqeqYw3rQ69"
     #Set up KDB.AI endpoint and API key
     KDBAI_ENDPOINT = (
         os.environ["KDBAI_ENDPOINT"]
