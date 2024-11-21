@@ -8,6 +8,5 @@ nest_asyncio
 deepeval
 llama-index
 beautifulsoup4
-kdbai
+kdbai-client
 pandas
-
