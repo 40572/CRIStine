@@ -1,2 +1,2 @@
 # CRIStine
-Source repositiry for CRIStine AI
+Source repository for CRIStine AI
