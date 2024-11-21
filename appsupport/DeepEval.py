@@ -4,11 +4,6 @@ import os
 import openai
 from getpass import getpass
 
-
-openai.api_key = "sk-w7KwcyTsWL-l5waK0w6OTtJUCzyeukZKL20tqjZOCGT3BlbkFJpKzJDQ0qVEZ53ip3G_TBBAq-Ed08kpDZgxb9t6P60A"
-
-os.environ["OPENAI_API_KEY"] = "sk-w7KwcyTsWL-l5waK0w6OTtJUCzyeukZKL20tqjZOCGT3BlbkFJpKzJDQ0qVEZ53ip3G_TBBAq-Ed08kpDZgxb9t6P60A"
-
 from deepeval.metrics import BiasMetric
 from deepeval.test_case import LLMTestCase
 from deepeval.metrics import GEval
@@ -20,9 +15,7 @@ from deepeval.metrics import FaithfulnessMetric
 from deepeval.metrics import HallucinationMetric
 from deepeval.metrics import ToxicityMetric
 
-def set_key():
-    OPENAI_API_KEY = "sk-w7KwcyTsWL-l5waK0w6OTtJUCzyeukZKL20tqjZOCGT3BlbkFJpKzJDQ0qVEZ53ip3G_TBBAq-Ed08kpDZgxb9t6P60A"
-    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 
 def deep_eval_bias(user_input, response):
     metric = BiasMetric(threshold=0.5)
