@@ -27,7 +27,7 @@ def deep_eval_bias(user_input, response):
     eval_results =[metric.score, metric.reason]
     return eval_results
 
-def deep_eval_correctness(user_input, response,doc_retriever):
+def deep_eval_correctness(user_input, response,documents_ret):
     correctness_metric = GEval(
         name="Correctness",
         criteria="Determine whether the actual output is factually correct based on the documents supplied.",
@@ -39,8 +39,6 @@ def deep_eval_correctness(user_input, response,doc_retriever):
         ],
     evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
     )
-
-    documents_ret = doc_retriever.query(user_input)
 
     test_case = LLMTestCase(
         input=user_input,
@@ -82,13 +80,13 @@ def deep_eval_relevancy(user_input, response):
     return eval_results
 
 
-def deep_eval_faithfulness(user_input, response,doc_retriever):
+def deep_eval_faithfulness(user_input, response,documents_ret):
     metric = FaithfulnessMetric(
         threshold=0.5,
         model="gpt-4",
         include_reason=True
     )
-    documents_ret = [doc_retriever.query(user_input)]
+    
     test_case = LLMTestCase(
         input=user_input,
         actual_output=response,
@@ -98,8 +96,8 @@ def deep_eval_faithfulness(user_input, response,doc_retriever):
     eval_results =[metric.score, metric.reason]
     return eval_results
 
-def deep_eval_hallucination(user_input, response,doc_retriever):
-    documents_ret = [doc_retriever.query(user_input)]
+def deep_eval_hallucination(user_input, response,documents_ret):
+   
     test_case = LLMTestCase(
         input=user_input,
         actual_output=response,

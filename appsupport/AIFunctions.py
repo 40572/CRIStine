@@ -2,42 +2,68 @@
 # pip install openai
 
 
-from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 import streamlit as st
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.extractors import TitleExtractor
-from llama_index.core.ingestion import IngestionPipeline, IngestionCache
 from llama_index.core import StorageContext, load_index_from_storage
-from bs4 import BeautifulSoup
-from urllib import request
 import os
-import kdbai_client as kdbai
-import time
-import pandas as pd
+from azure.core.credentials import AzureKeyCredential
+from langchain_openai import AzureChatOpenAI
+from azure.core.credentials import AzureKeyCredential
+from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
+from azure.search.documents import SearchClient
+from azure.search.documents import SearchClient
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents.models import VectorizedQuery
 
 
-def get_response2(k, user_query, chat_history, base_url, system_msg, max_tokens):
 
-    #Set up KDB.AI endpoint and API key
-    KDBAI_ENDPOINT = (
-        os.environ["KDBAI_ENDPOINT"]
+azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+azure_search_credential = AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY"))
+azure_search_index_name = "cris-mm-rag-alt"
+azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+azure_openai_key = os.getenv("AZURE_OPENAI_API_KEY")
+azure_openai_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+azure_openai_model = os.getenv("AZURE_OPENAI_MODEL")
+azure_openai_model_name = os.getenv("AZURE_OPENAI_MODEL_NAME")
+azure_openai_deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+azure_openai_embedding_endpoint =os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT")
+azure_openai_embedding_api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+azure_openai_embedding_dimensions = os.getenv("AZURE_OPENAI_EMBEDDING_DIMENSIONS")
+azure_openai_embedding_model_name = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL_NAME")
+azure_openai_embedding_deployment = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+azure_openai_embedding_api_version = os.getenv("AZURE_OPENAI_EMBEDDING_API_VERSION")
+azure_openai_embedding_model_max_size = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL_MAX_SIZE")
+
+
+def embed_text(content):
+    embedding_client = AzureOpenAIEmbedding(
+        azure_deployment=azure_openai_embedding_model_name,
+        api_version=azure_openai_embedding_api_version,
+        azure_endpoint=azure_openai_embedding_endpoint,
+        api_key=azure_openai_embedding_api_key,
+        credential = AzureKeyCredential(azure_openai_embedding_api_key)
     )
-    KDBAI_API_KEY = (
-        os.environ["KDBAI_API_KEY"]
-    )
+    content_embeddings = embedding_client.get_text_embedding(content)
+    return content_embeddings
 
-    #connect to KDB.AI
-    session = kdbai.Session(api_key=KDBAI_API_KEY, endpoint=KDBAI_ENDPOINT)
-    db = session.database('myDatabase')
-    table = db.table('multi_modal_ImageBind')
-    #Create a query vector for similarity search
-    query_vector = [get_hf_embedding(user_query)]
-    results = mm_search(table,query_vector, k) 
 
+def ret_documents_azure(k, user_query):
+    
+    search_client = SearchClient(endpoint=azure_search_endpoint, index_name=azure_search_index_name, credential=azure_search_credential)
+    vector_query = VectorizedQuery(vector=embed_text(user_query), k_nearest_neighbors=50, fields="contentVector")
+   
+    results = search_client.search(  
+        search_text=None,  
+        vector_queries= [vector_query],
+        select=["title", "content", "category", "file_name"],
+        top=k
+    )  
+    
+    return results
+
+def get_response2(k, user_query, chat_history, system_msg, max_tokens):
+    
     template = """
     {system_msg} Answer the following questions considering the history of the conversation:
     Chat history: {chat_history}
@@ -46,65 +72,44 @@ def get_response2(k, user_query, chat_history, base_url, system_msg, max_tokens)
     Documents: {documents}
     """
     prompt = ChatPromptTemplate.from_template(template)
-    llm = ChatOpenAI(
-        base_url=base_url,
-        max_tokens=max_tokens,
-        api_key="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" 
-	)         
+    
+    llm = AzureChatOpenAI( 
+        azure_deployment=azure_openai_deployment_name,  # or your deployment
+        openai_api_type="azure",
+        azure_endpoint=azure_openai_endpoint,
+        model_name=azure_openai_model_name,
+        api_version=azure_openai_api_version,  # or your api version
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2
+        
+    )
+    
+
     chain = prompt | llm | StrOutputParser()
  
-    image_links = ''
+    image_links = []
+    citation_links = []
+    doc_texts = ''
+
+    results = ret_documents_azure(k, user_query )
     
-    documents = results[0]
-   
-    doc_texts =  "\\n".join( doc for doc in documents[documents['media_type']=='text']['text']) 
-    image_links = "\\n".join( doc for doc in documents[documents['media_type']=='image']['path']) 
-    citation_links = "\\n".join( doc for doc in documents[documents['media_type']=='text']['path']) 
-               
+        
+    for result in results:
+        
+        if result['category'] == 'image':
+            image_links.append(result['file_name']) 
+        elif result['category'] == 'text':
+            citation_links.append(result['file_name'])
+            doc_texts  += result['content'] + "\\n"
+    
     return chain.stream({
         "system_msg" :system_msg,
         "chat_history": chat_history,
         "user_question": user_query,
         "documents": doc_texts,
-    }), image_links, citation_links
-
-
-# Multimodal search function, identifies most relevant images and text within the vector database
-def mm_search(table, query, k=1):
-    #image_results = table.search(vectors={"flat_index":query}, n=k, filter=[("like", "media_type", "image")])
-    text_results = table.search(vectors={"flat_index":query}, n=k, filter=[("like", "media_type", "text")])
-    text_results_ids = text_results[0]['element_id']
-        
-    text_results_ids_str = []
-    for element_id in text_results_ids:
-        text_results_ids_str.append(str(element_id))
-        
-    image_results = table.query( filter=[("like", "media_type", "image"),("in", "element_parent_id", text_results_ids_str) ])
-      
-    if len(image_results) > 0:
-        results = [pd.concat([text_results[0], image_results ], ignore_index=True)]
-    else:
-        results = [pd.concat([text_results[0]], ignore_index=True)]
-      
-    return(results)
-
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-import numpy as np
-from retrying import retry
-
-@retry(wait_fixed=3000,stop_max_attempt_number=3)
-def get_hf_embedding(text_data):
-    model = "sentence-transformers/all-mpnet-base-v2"
-    #model = "sentence-transformers/all-roberta-large-v1"
-          
-    hf = HuggingFaceEndpointEmbeddings(
-            model=model,
-            task="feature-extraction",
-            huggingfacehub_api_token="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"
-    )
-    embedding =hf.embed_query(text_data)
-    vector = np.array(embedding)
-    return(vector)
+    }), image_links, citation_links, doc_texts
 
 
    
