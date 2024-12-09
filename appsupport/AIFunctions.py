@@ -20,7 +20,7 @@ from azure.search.documents.models import VectorizedQuery
 
 azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
 azure_search_credential = AzureKeyCredential(os.getenv("AZURE_SEARCH_KEY"))
-azure_search_index_name = "cris-mm-rag-alt"
+azure_search_index_name = "cris-mm-rag-alt-pdf"
 azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 azure_openai_key = os.getenv("AZURE_OPENAI_API_KEY")
 azure_openai_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
@@ -110,8 +110,6 @@ def get_response2(k, user_query, chat_history, system_msg, max_tokens):
         "user_question": user_query,
         "documents": doc_texts,
     }), image_links, citation_links, doc_texts
-
-
    
        
        

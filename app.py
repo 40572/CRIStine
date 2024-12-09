@@ -9,6 +9,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 from pathlib import Path
 import socket
 import streamlit.components.v1 as components
+import pybase64
+
 
 
 # Variables used Globally
@@ -54,6 +56,10 @@ if "avatars" not in st.session_state:
 
 if 'user_text' not in st.session_state:
     st.session_state.user_text = None
+
+
+
+
 
 
 st.title("Interactive CRIS Assistant")
@@ -174,13 +180,14 @@ with output_container:
                         st.image(imagelink)
                 if len(citationlinks) != 0: #non zero indicates source articles were found
                     st.write(f"The following Article(s) may be helpful: ")
+                    citation_count = 0
                     for citationlink in citationlinks:
-                        hostname = socket.gethostname()
-                        ip_address = socket.gethostbyname(hostname)
-                        button_disp = Path(citationlink).resolve().stem
-                        citationlink = f"http://{ip_address}:8666/{ os.path.basename(citationlink)}"
-                        st.link_button(button_disp,citationlink)
-
+                        citation_count += 1
+                        st.link_button(
+                            url=f'./articleviewer/?pdffile={citationlink}',
+                            label=f'Article {citation_count}'
+                        )
+                        
                 st.session_state.response = response
                 
 
@@ -213,8 +220,6 @@ with output_container:
                     eval_results = DeepEval.deep_eval_toxicity(st.session_state.user_text, st.session_state.response)
                     st.markdown(f"**Toxicity Score:** {eval_results[0]}   **Reason: ** {eval_results[1]}")
     
-
-
 
 
     
